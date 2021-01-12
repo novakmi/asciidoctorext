@@ -1,0 +1,18 @@
+== Asciidoctor Extension(s)
+See https://asciidoctor.org/docs/asciidoctorj/#extension-api
+
+== Extensions:
+Copy button. Modification of https://gitlab.com/puravida-software/asciidoctor-extensions
+
+
+== Creadits
+
+This project uses ideas, source code from following projects and locations
+
+https://github.com/aalmiray/asciidoctor-piglatin-example
+https://gitlab.com/puravida-software/asciidoctor-extensions
+https://github.com/asciidoctor/asciidoctor-extensions-lab/issues/61
+
+
+
+

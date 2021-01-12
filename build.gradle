@@ -1,0 +1,156 @@
+/* (c) Michal Novák, Asciidoctor extension(s) it.novakmi@gmail.com, see LICENSE file */
+
+/*
+buildscript {
+    repositories {
+        jcenter()
+    }
+}
+*/
+
+plugins {
+    id 'base'
+    id 'groovy'
+    //id 'java-gradle-plugin'
+    id 'idea'
+    id 'com.github.ben-manes.versions' version '0.36.0' // gradle dependencyUpdates -Drevision=release
+    id 'maven-publish' // to use maven repository
+}
+
+repositories {
+    jcenter()
+}
+
+dependencies {
+    implementation 'org.asciidoctor:asciidoctorj:2.4.2'
+}
+
+
+def installDir = file('./install')
+
+/*
+gradlePlugin {
+    plugins {
+        "$project.name" {
+            id = project.name
+            implementationClass = "${group}.${project.name}.LxDockerPlugin"
+        }
+    }
+}
+*/
+
+dependencies {
+    //implementation gradleApi()
+    implementation localGroovy()
+    implementation 'org.asciidoctor:asciidoctorj:2.2.0'
+    /*
+    testImplementation group: 'org.slf4j', name: 'slf4j-api', version: '1.7.30'
+    testImplementation gradleTestKit()
+    testImplementation group: 'org.testng', name: 'testng', version: '7.3.0'
+     */
+}
+
+def manifestAttrs = [
+    'Implementation-Title': project.name,
+    'Implementation-Version': project.version,
+    'Specification-Vendor': project.author,
+    'Built-By':  project.author,
+    'Specification-Title': project.name,
+    'Extension-Name': project.name,
+    'Specification-Version': project.version
+]
+
+jar {
+    archiveBaseName = project.name
+    manifest {
+        attributes(
+            manifestAttrs
+        )
+    }
+}
+
+clean.doLast {  //add to clean task
+    installDir.deleteDir()
+}
+
+task sourcesJar(type: Jar) {
+    archiveClassifier = 'sources'
+    from "${project.projectDir}/src/main"
+    manifest {
+        attributes(
+            manifestAttrs
+        )
+    }
+}
+
+task groovydocJar(type: Jar, dependsOn: groovydoc) {
+    archiveClassifier = 'groovydoc'
+    from groovydoc.destinationDir
+    manifest {
+        attributes(
+            manifestAttrs
+        )
+    }
+}
+
+task prepareInstall(type: Copy, dependsOn: [jar, sourcesJar, groovydocJar]) {
+    installDir.mkdirs()
+    //logger.quiet("externalJars {}", externalJars)
+    //from configurations['compileClasspath']?.files/*?.findAll { it.absolutePath.indexOf('unspecified') < 0 }*/
+    from "${project.projectDir}/build/libs"
+    into installDir
+}
+
+/*
+test {
+    jvmArgs "-Dtestng.dtd.http=true"
+    testLogging.showStandardStreams = true
+    testLogging.exceptionFormat = 'full'
+    systemProperties["testTmpDir"] = "${projectDir}/build/tmp/test"
+    useTestNG() {
+        suiteXmlBuilder().suite(name: 'Test LxDockerPlugin') {
+            test(name: 'lxdocker', annotations: 'JDK', verbose: '1') {
+                groups {
+                    run {
+                        include(name: "basic")
+                    }
+                }
+                classes([:]) {
+                    'class'(name: "com.github.novakmi.lxdocker.test.LxDockerfileTaskTest")
+                    'class'(name: "com.github.novakmi.lxdocker.test.LxDockerfileTaskStartTest")
+                }
+            }
+        }
+    }
+}
+*/
+// zip into build/distributions
+task zipInstall(type: Zip, dependsOn: prepareInstall) {
+    from installDir.toString()
+}
+
+java {
+    withSourcesJar()
+}
+
+publishing {   // use gradle publish
+    def localMavenDir = System.getenv()['LOCAL_MAVEN_DIR']
+    if (!localMavenDir) {
+        logger.error("LOCAL_MAVEN_DIR is not defined! Artifacts will not be exported!")
+    } else {
+        publications {
+            lxDockerLibrary(MavenPublication) {
+                from components.java
+                artifact groovydocJar {
+                    classifier "groovydoc"
+                }
+            }
+        }
+        repositories {
+            maven {
+                name = 'novakmirepo'
+                url = "file://${localMavenDir}/releases"
+            }
+        }
+    }
+}
